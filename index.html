@@ -1,0 +1,457 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRAF</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { min-height: 100%; font-family: 'Inter', system-ui, sans-serif; background: #080b14; color: #e4e8f5; }
+        body { background: radial-gradient(circle at top left, rgba(54,150,255,0.18), transparent 28%), radial-gradient(circle at 80% 10%, rgba(255,118,197,0.14), transparent 20%), #090d18; }
+        a { color: inherit; text-decoration: none; }
+        .page-wrapper { max-width: 1300px; margin: 0 auto; padding: 24px 20px 40px; }
+        .topbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 30px; }
+        .brand { display: flex; align-items: center; gap: 12px; font-size: 1.25rem; font-weight: 800; letter-spacing: 0.02em; }
+        .brand-mark { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #42d392, #10a4ff); display: grid; place-items: center; color: #0e1120; font-weight: 800; }
+        .brand-title { color: #ffffff; }
+        .brand-subtitle { color: #7b89b8; font-size: 0.88rem; }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 12px; }
+        .nav-link { padding: 12px 18px; border-radius: 999px; background: rgba(255,255,255,0.04); color: #a3b5d1; transition: transform 0.2s ease, background 0.2s ease; cursor: pointer; }
+        .nav-link.active, .nav-link:hover { background: rgba(255,255,255,0.12); color: #ffffff; transform: translateY(-1px); }
+        .section-pane { display: none; animation: fadeIn 0.24s ease; }
+        .section-pane.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .hero-card, .panel, .allocator-card, .predictions-card, .scheduler-card { background: linear-gradient(180deg, rgba(9,13,24,.92), rgba(8,13,20,.96)); border: 1px solid rgba(255,255,255,0.08); border-radius: 28px; padding: 34px; box-shadow: 0 40px 120px rgba(3, 12, 39, 0.22); }
+        .hero-card h1, .panel h2, .scheduler-card h2, .predictions-card h2 { color: #f2f5ff; margin-bottom: 14px; }
+        .hero-card p, .panel p, .predictions-card p { color: #8f9ed3; font-size: 1rem; max-width: 760px; }
+        .stats-row, .server-grid, .summary-grid, .allocator-form, .scheduler-grid { display: grid; gap: 18px; }
+        .stats-row { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 28px; }
+        .server-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 24px; }
+        .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 24px; }
+        .stat-card, .server-card, .metric-card, .history-card { padding: 22px 24px; border-radius: 24px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); }
+        .stat-card small, .server-card small, .metric-card small { color: #8ca2d9; text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.76rem; }
+        .stat-card strong, .metric-card strong, .server-card strong { display: block; margin-top: 12px; font-size: 1.7rem; color: #ffffff; }
+        .server-card { position: relative; overflow: hidden; }
+        .server-card::before { content: ''; position: absolute; inset: -24px -28px 0 0; background: radial-gradient(circle at top right, rgba(59,242,255,0.16), transparent 38%); pointer-events: none; }
+        .server-card h3 { margin-bottom: 10px; color: #e8efff; }
+        .server-card .tag { display: inline-flex; padding: 6px 12px; border-radius: 999px; background: rgba(15,143,103,0.16); color: #b7f2d5; font-size: 0.85rem; }
+        .server-card .metric { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .bar-wrapper { width: 100%; height: 9px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: inherit; transition: width 0.35s ease; }
+        .bar-a { background: #4dd2ff; }
+        .bar-b { background: #ff8c4f; }
+        .chart-grid { display: grid; grid-template-columns: 1.7fr 1.3fr; gap: 22px; margin-top: 22px; }
+        .chart-panel { padding: 28px; background: rgba(255,255,255,0.04); border-radius: 28px; border: 1px solid rgba(255,255,255,0.06); }
+        .chart-box { position: relative; width: 100%; height: 360px; }
+        canvas { display: block; width: 100%; height: 100%; }
+        .button-row { display: inline-flex; flex-wrap: wrap; gap: 16px; margin-top: 26px; }
+        button, .primary-button { border: none; border-radius: 18px; cursor: pointer; font-weight: 700; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .primary-button { background: linear-gradient(135deg, #7268ff, #4c4fff); color: #ffffff; padding: 16px 24px; }
+        .primary-button:hover, button:hover { transform: translateY(-1px); box-shadow: 0 16px 40px rgba(114,104,255,0.24); }
+        .input-field, .select-field, .range-input { width: 100%; padding: 16px 18px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04); color: #f4f7ff; font-size: 0.95rem; }
+        .select-field { appearance: none; background-image: url('data:image/svg+xml,%3Csvg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M1 1L6 6L11 1" stroke="%23ffffff" stroke-width="2"/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 16px center; background-size: 12px 8px; }
+        .range-input { -webkit-appearance: none; appearance: none; height: 6px; background: rgba(255,255,255,0.1); accent-color: #7268ff; }
+        .range-input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #7268ff; box-shadow: 0 0 0 6px rgba(114,104,255,0.18); }
+        .form-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 18px; }
+        .form-row { display: flex; flex-direction: column; gap: 10px; }
+        .form-row label { color: #9bb0ea; font-size: 0.92rem; }
+        .history-card table { width: 100%; border-collapse: collapse; min-width: 720px; }
+        th, td { padding: 16px 18px; text-align: left; font-size: 0.96rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        th { color: #8491bf; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.78rem; border-bottom: 1px solid rgba(255,255,255,0.12); }
+        td { color: #e9efff; }
+        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        .status-green { color: #4ee0ae; }
+        .predictions-grid { display: grid; grid-template-columns: 1fr; gap: 22px; margin-top: 24px; }
+        .prediction-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
+        .prediction-card { padding: 20px 22px; border-radius: 24px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+        .prediction-card h3 { margin-bottom: 12px; color: #f2f5ff; }
+        .prediction-card p { color: #9ba7d8; font-size: 0.95rem; }
+        .prediction-card strong { display: block; margin-top: 12px; font-size: 1.7rem; color: #ffffff; }
+        .label-inline { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .label-inline label { color: #9bb0ea; font-size: 0.95rem; }
+        .scheduler-card .button-row { margin-top: 24px; }
+        .timeline-list { margin-top: 24px; display: grid; gap: 12px; }
+        .timeline-item { padding: 16px 18px; border-radius: 18px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+        .timeline-item strong { color: #ffffff; display: block; margin-bottom: 4px; }
+        @media (max-width: 1080px) {
+            .server-grid, .stats-row, .summary-grid, .prediction-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .chart-grid { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 720px) {
+            .topbar { flex-direction: column; align-items: stretch; }
+            .nav-links { justify-content: center; }
+            .server-grid, .stats-row, .summary-grid, .prediction-summary { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark">S</div>
+                <div>
+                    <div class="brand-title">SRAF</div>
+                    <div class="brand-subtitle">Smart Resource Allocation</div>
+                </div>
+            </div>
+            <div class="nav-links">
+                <div class="nav-link active" data-target="dashboard" onclick="showSection('dashboard')">Dashboard</div>
+                <div class="nav-link" data-target="allocator" onclick="showSection('allocator')">Allocator</div>
+                <div class="nav-link" data-target="scheduler" onclick="showSection('scheduler')">Scheduler</div>
+                <div class="nav-link" data-target="predictions" onclick="showSection('predictions')">Predictions</div>
+            </div>
+        </header>
+
+        <main>
+            <section id="dashboard" class="section-pane active">
+                <div class="hero-card">
+                    <h1>System Dashboard</h1>
+                    <p>Live server metrics via WebSocket. Monitor CPU load, memory utilization, and distribution across all nodes in a single view.</p>
+                    <div class="stats-row">
+                        <div class="stat-card"><small>Active Servers</small><strong>4 Servers</strong></div>
+                        <div class="stat-card"><small>Average CPU</small><strong>31%</strong></div>
+                        <div class="stat-card"><small>Average Memory</small><strong>45%</strong></div>
+                        <div class="stat-card"><small>Current Load</small><strong>Stable</strong></div>
+                    </div>
+                </div>
+                <div class="server-grid">
+                    <div class="server-card">
+                        <small>Server-Alpha</small>
+                        <h3><span class="tag">active</span></h3>
+                        <div class="metric"><span>CPU</span><strong>15%</strong></div>
+                        <div class="bar-wrapper"><div class="bar-fill bar-a" style="width: 15%"></div></div>
+                        <div class="metric"><span>MEM</span><strong>80%</strong></div>
+                        <div class="bar-wrapper"><div class="bar-fill bar-b" style="width: 80%"></div></div>
+                    </div>
+                    <div class="server-card">
+                        <small>Server-Beta</small>
+                        <h3><span class="tag">active</span></h3>
+                        <div class="metric"><span>CPU</span><strong>17%</strong></div>
+                        <div class="bar-wrapper"><div class="bar-fill bar-a" style="width: 17%"></div></div>
+                        <div class="metric"><span>MEM</span><strong>27%</strong></div>
+                        <div class="bar-wrapper"><div class="bar-fill bar-b" style="width: 27%"></div></div>
+                    </div>
+                    <div class="server-card">
+                        <small>Server-Gamma</small>
+                        <h3><span class="tag">active</span></h3>
+                        <div class="metric"><span>CPU</span><strong>51%</strong></div>
+                        <div class="bar-wrapper"><div class="bar-fill bar-a" style="width: 51%"></div></div>
+                        <div class="metric"><span>MEM</span><strong>45%</strong></div>
+                        <div class="bar-wrapper"><div class="bar-fill bar-b" style="width: 45%"></div></div>
+                    </div>
+                    <div class="server-card">
+                        <small>Server-Delta</small>
+                        <h3><span class="tag">active</span></h3>
+                        <div class="metric"><span>CPU</span><strong>23%</strong></div>
+                        <div class="bar-wrapper"><div class="bar-fill bar-a" style="width: 23%"></div></div>
+                        <div class="metric"><span>MEM</span><strong>60%</strong></div>
+                        <div class="bar-wrapper"><div class="bar-fill bar-b" style="width: 60%"></div></div>
+                    </div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-panel">
+                        <h2>Live CPU % — All Servers</h2>
+                        <p>Track CPU performance for every active node across the cluster.</p>
+                        <div class="chart-box"><canvas id="dashboardCpuChart"></canvas></div>
+                    </div>
+                    <div class="chart-panel">
+                        <h2>Load Distribution</h2>
+                        <p>Current CPU distribution per server as a share of overall cluster load.</p>
+                        <div class="chart-box" style="height: 260px;"><canvas id="dashboardLoadChart"></canvas></div>
+                        <div class="summary-grid" style="margin-top:18px;">
+                            <div class="metric-card"><small>Server-Alpha</small><strong>17%</strong></div>
+                            <div class="metric-card"><small>Server-Beta</small><strong>15%</strong></div>
+                            <div class="metric-card"><small>Server-Gamma</small><strong>51%</strong></div>
+                            <div class="metric-card"><small>Server-Delta</small><strong>23%</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="allocator" class="section-pane">
+                <div class="hero-card">
+                    <h1>Resource Allocator</h1>
+                    <p>Greedy Best-Fit Knapsack Algorithm</p>
+                    <div class="allocator-card">
+                        <div class="allocator-form">
+                            <div class="form-row">
+                                <label>Job Name</label>
+                                <input type="text" placeholder="e.g. MLTraining-Job" class="input-field">
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label>Priority (1–5)</label>
+                                    <input type="number" min="1" max="5" value="2" class="input-field">
+                                </div>
+                                <div class="form-row">
+                                    <label>Duration (ms)</label>
+                                    <input type="text" value="2000" class="input-field">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label>CPU Required: <span class="slider-value">30%</span></label>
+                                <input type="range" min="0" max="100" value="30" class="range-input" id="cpuSlider">
+                            </div>
+                            <div class="form-row">
+                                <label>MEM Required: <span class="slider-value">30%</span></label>
+                                <input type="range" min="0" max="100" value="30" class="range-input" id="memSlider">
+                            </div>
+                            <button class="primary-button">🚀 Allocate Job</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel" style="margin-top: 24px; padding: 28px;">
+                    <h2>Allocation History</h2>
+                    <div class="history-card">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Job</th>
+                                    <th>Server</th>
+                                    <th>Algorithm</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>ML training Job</td>
+                                    <td><span class="tag">Server-Gamma</span></td>
+                                    <td><span class="status-green">Greedy Best-Fit Knapsack</span></td>
+                                    <td>2026-04-29 06:46:09</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="scheduler" class="section-pane">
+                <div class="scheduler-card">
+                    <h2>Process Scheduler</h2>
+                    <p>Choose a sample scheduling algorithm and inspect the generated Gantt chart.</p>
+                    <div class="button-row">
+                        <button class="primary-button" onclick="renderScheduler('Round Robin')">Run Round Robin</button>
+                        <button class="primary-button" onclick="renderScheduler('Priority')">Run Priority Scheduling</button>
+                    </div>
+                    <div class="chart-panel" style="margin-top: 24px;">
+                        <h3>Scheduling Gantt Chart</h3>
+                        <div class="chart-box"><canvas id="schedulerChart"></canvas></div>
+                    </div>
+                    <div class="history-card" style="margin-top: 24px;">
+                        <h3>Sample Task Data</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Server</th>
+                                    <th>Priority</th>
+                                    <th>Start</th>
+                                    <th>Duration</th>
+                                    <th>End</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schedulerDataBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="predictions" class="section-pane">
+                <div class="predictions-card">
+                    <h2>ML Load Predictions</h2>
+                    <p>RandomForest — 2-hour forecast in 5-minute intervals</p>
+                    <div style="margin-top: 24px;">
+                        <label class="label-inline"><span>Select Server:</span>
+                            <select class="select-field" id="serverSelect">
+                                <option>Server-Gamma</option>
+                                <option>Server-Alpha</option>
+                                <option>Server-Beta</option>
+                                <option>Server-Delta</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                <div class="panel" style="margin-top: 24px; padding: 28px;">
+                    <h2>Load Forecast — Server-Gamma (Next 2 Hours)</h2>
+                    <div class="chart-box"><canvas id="predictionsChart"></canvas></div>
+                    <div class="prediction-summary">
+                        <div class="prediction-card"><h3>Trend</h3><p>Stable</p></div>
+                        <div class="prediction-card"><h3>Peak CPU (predicted)</h3><strong>61.3%</strong></div>
+                        <div class="prediction-card"><h3>Avg Confidence</h3><strong>81.3%</strong></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            document.querySelectorAll('.section-pane').forEach(section => {
+                section.classList.toggle('active', section.id === sectionId);
+            });
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.toggle('active', link.dataset.target === sectionId);
+            });
+        }
+
+        const schedulerTasks = [
+            { task: 'P1', server: 'Server-Alpha', priority: 2, arrival: 0, duration: 5 },
+            { task: 'P2', server: 'Server-Beta', priority: 1, arrival: 1, duration: 4 },
+            { task: 'P3', server: 'Server-Gamma', priority: 3, arrival: 2, duration: 6 },
+            { task: 'P4', server: 'Server-Delta', priority: 2, arrival: 3, duration: 3 }
+        ];
+        let schedulerChart;
+
+        function scheduleRoundRobin(tasks) {
+            const quantum = 3;
+            const queue = tasks.map(t => ({ ...t, remaining: t.duration }));
+            const schedule = [];
+            let currentTime = 0;
+            while (queue.some(task => task.remaining > 0)) {
+                const active = queue.filter(task => task.arrival <= currentTime && task.remaining > 0);
+                if (!active.length) {
+                    currentTime = Math.min(...queue.filter(t => t.remaining > 0).map(t => t.arrival));
+                    continue;
+                }
+                const task = active.shift();
+                const execute = Math.min(task.remaining, quantum);
+                schedule.push({ task: task.task, server: task.server, priority: task.priority, start: currentTime, duration: execute });
+                currentTime += execute;
+                task.remaining -= execute;
+            }
+            return schedule;
+        }
+
+        function schedulePriority(tasks) {
+            const remaining = tasks.map(t => ({ ...t }));
+            const schedule = [];
+            let currentTime = 0;
+            while (remaining.length) {
+                const available = remaining.filter(t => t.arrival <= currentTime);
+                if (!available.length) {
+                    currentTime = Math.min(...remaining.map(t => t.arrival));
+                    continue;
+                }
+                available.sort((a, b) => a.priority - b.priority || a.arrival - b.arrival);
+                const task = available[0];
+                schedule.push({ task: task.task, server: task.server, priority: task.priority, start: currentTime, duration: task.duration });
+                currentTime += task.duration;
+                remaining.splice(remaining.indexOf(task), 1);
+            }
+            return schedule;
+        }
+
+        function renderScheduler(algorithm) {
+            const schedule = algorithm === 'Priority'
+                ? schedulePriority(schedulerTasks)
+                : scheduleRoundRobin(schedulerTasks);
+            const labels = schedule.map(item => item.task);
+            const starts = schedule.map(item => item.start);
+            const durations = schedule.map(item => item.duration);
+            schedulerChart.data.labels = labels;
+            schedulerChart.data.datasets[0].data = starts;
+            schedulerChart.data.datasets[1].data = durations;
+            schedulerChart.options.plugins.title.text = `${algorithm} Schedule`;
+            schedulerChart.update();
+
+            const body = document.getElementById('schedulerDataBody');
+            body.innerHTML = '';
+            schedule.forEach(item => {
+                const end = item.start + item.duration;
+                body.innerHTML += `<tr><td>${item.task}</td><td>${item.server}</td><td>${item.priority}</td><td>${item.start}</td><td>${item.duration}</td><td>${end}</td></tr>`;
+            });
+        }
+
+        function initCharts() {
+            const dashboardCpuCtx = document.getElementById('dashboardCpuChart').getContext('2d');
+            new Chart(dashboardCpuCtx, {
+                type: 'line',
+                data: {
+                    labels: ['07:07', '07:12', '07:17', '07:22', '07:27', '07:32', '07:37', '07:42', '07:47', '07:52'],
+                    datasets: [
+                        { label: 'Server-Alpha', borderColor: '#5d7dff', backgroundColor: 'rgba(93,125,255,0.14)', data: [12, 14, 15, 16, 18, 16, 17, 19, 18, 17], tension: 0.35, fill: true },
+                        { label: 'Server-Beta', borderColor: '#2fdcb0', backgroundColor: 'rgba(47,220,176,0.14)', data: [9, 10, 12, 13, 14, 13, 14, 15, 14, 13], tension: 0.35, fill: true },
+                        { label: 'Server-Gamma', borderColor: '#f6b76c', backgroundColor: 'rgba(246,183,108,0.14)', data: [20, 22, 24, 26, 27, 29, 28, 30, 29, 28], tension: 0.35, fill: true },
+                        { label: 'Server-Delta', borderColor: '#d873ff', backgroundColor: 'rgba(216,115,255,0.14)', data: [15, 16, 17, 18, 18, 19, 18, 20, 19, 18], tension: 0.35, fill: true }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#c9d1ff' } } },
+                    scales: { x: { ticks: { color: '#9fb0d6' }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { beginAtZero: true, max: 60, ticks: { color: '#9fb0d6' }, grid: { color: 'rgba(255,255,255,0.05)' } } }
+                }
+            });
+
+            const dashboardLoadCtx = document.getElementById('dashboardLoadChart').getContext('2d');
+            new Chart(dashboardLoadCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Alpha', 'Beta', 'Gamma', 'Delta'],
+                    datasets: [{ data: [17, 15, 51, 23], backgroundColor: ['#5d7dff', '#2fdcb0', '#f6b76c', '#d873ff'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false } } }
+            });
+
+            const schedulerCtx = document.getElementById('schedulerChart').getContext('2d');
+            schedulerChart = new Chart(schedulerCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Start', data: [], backgroundColor: 'rgba(0,0,0,0)', stack: 'stack1' },
+                        { label: 'Duration', data: [], backgroundColor: '#7268ff', stack: 'stack1' }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Schedule' }
+                    },
+                    scales: {
+                        x: { stacked: true, ticks: { color: '#9fb0d6' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { stacked: true, ticks: { color: '#c9d1ff' } }
+                    }
+                }
+            });
+
+            const predictionsCtx = document.getElementById('predictionsChart').getContext('2d');
+            new Chart(predictionsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['07:09', '07:14', '07:19', '07:24', '07:29', '07:34', '07:39', '07:44', '07:49', '07:54', '07:59', '08:04'],
+                    datasets: [
+                        { label: 'CPU Confidence', borderColor: '#7268ff', backgroundColor: 'rgba(114,104,255,0.18)', data: [62, 63, 64, 65, 67, 68, 70, 71, 72, 73, 74, 75], tension: 0.2, fill: false },
+                        { label: 'CPU %', borderColor: '#f6b76c', backgroundColor: 'rgba(246,183,108,0.16)', data: [60, 61, 61, 62, 62, 63, 63, 64, 64, 64, 65, 65], tension: 0.2, fill: false },
+                        { label: 'MEM %', borderColor: '#2fdcb0', backgroundColor: 'rgba(47,220,176,0.16)', data: [50, 49, 48, 47, 47, 46, 46, 45, 45, 44, 44, 43], tension: 0.2, fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#c9d1ff' } } },
+                    scales: { x: { ticks: { color: '#9fb0d6' }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { beginAtZero: false, max: 100, ticks: { color: '#9fb0d6' }, grid: { color: 'rgba(255,255,255,0.05)' } } }
+                }
+            });
+        }
+
+        window.onload = function() {
+            initCharts();
+            renderScheduler('Round Robin');
+            const cpuSlider = document.getElementById('cpuSlider');
+            const memSlider = document.getElementById('memSlider');
+            const cpuValue = cpuSlider.closest('.form-row').querySelector('.slider-value');
+            const memValue = memSlider.closest('.form-row').querySelector('.slider-value');
+            cpuSlider.oninput = () => cpuValue.textContent = `${cpuSlider.value}%`;
+            memSlider.oninput = () => memValue.textContent = `${memSlider.value}%`;
+        };
+    </script>
+</body>
+</html>
